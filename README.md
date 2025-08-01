@@ -11,7 +11,7 @@
 
 - 変異と**オーバーラップしている結合モチーフ**のみを図示（--overlap_onlyオプション）
 - 各ドットに**モチーフIDを表示**（--no_labelオプション）
-（ドットにラベルを付ける基準（X軸、Y軸のしきい値）は02-2.py内にハードコーディングされており、直接編集する必要がある）
+  （ドットにラベルを付ける基準（X軸、Y軸のしきい値）は02-2.py内にハードコーディングされており、直接編集する必要がある）
 
 
 ---
@@ -19,7 +19,7 @@
 ## 📦 必要なもの
 - [MEME Suite (FIMO)](https://meme-suite.org/)
 - モチーフのDBは以下からダウンロードできる：
--- https://jaspar.elixir.no/downloads/
--- https://meme-suite.org/meme/meme-software/Databases/motifs/motif_databases.12.25.tgz
+  - https://jaspar.elixir.no/downloads/
+  - https://meme-suite.org/meme/meme-software/Databases/motifs/motif_databases.12.25.tgz
   
 
