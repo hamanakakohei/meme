@@ -23,3 +23,5 @@
   - https://meme-suite.org/meme/meme-software/Databases/motifs/motif_databases.12.25.tgz
   
 
+to do:
+01.pyの出力が追加になっていて上書き保存になっていない、、、
