@@ -20,6 +20,10 @@ def parse_args():
     parser.add_argument("--no_label", action="store_true")
     parser.add_argument("--highlight_threshold", type=float, default=None,
                         help="X or Y軸がこの値を超える点を赤、それ以外をグレーにする（例: 4）")
+    parser.add_argument("--min_logp", type=float, default=2.0,
+                        help="xlim/ylimの下限（欠損値補完にも使用）")
+    parser.add_argument("--mark_missing", action="store_true",
+                        help="欠損値（下限で埋められた点）を×マークで描画する")
     parser.add_argument("--figsize", type=float, nargs=2, default=[12, 12])
     return parser.parse_args()
 
@@ -30,18 +34,24 @@ def plot_fimo_scatter(
     title: str = "",
     show_labels: bool = True,
     figsize=(12, 12),
-    highlight_threshold: float = None
+    highlight_threshold: float = None,
+    min_logp: float = 2.0,
+    mark_missing: bool = False
 ) -> None:
     plt.figure(figsize=figsize)
 
+    # 欠損由来点を識別するためのマスク
+    missing_mask = pivot_df["ref_missing"] | pivot_df["alt_missing"]
+
     # --- カラーマッピング ---
     if highlight_threshold is None:
-        # デフォルト（overlap / non-overlap）
-        colors = {"overlap": "red", "non-overlap": "gray"}
+        ## デフォルト（overlap / non-overlap）
+        #colors = {"overlap": "red", "non-overlap": "gray"}
         for label, group in pivot_df.groupby("overlap"):
             plt.scatter(
                 group["ref"], group["alt"],
-                color=colors.get(label, "black"),
+                color="gray",
+                #color=colors.get(label, "black"),
                 label=label, alpha=0.7
             )
     else:
@@ -50,12 +60,20 @@ def plot_fimo_scatter(
         plt.scatter(
             pivot_df.loc[~high_mask, "ref"],
             pivot_df.loc[~high_mask, "alt"],
-            color="gray", alpha=0.6, label=f"< {highlight_threshold}"
+            color="gray", alpha=0.7, label=f"< {highlight_threshold}"
         )
         plt.scatter(
             pivot_df.loc[high_mask, "ref"],
             pivot_df.loc[high_mask, "alt"],
-            color="red", alpha=0.8, label=f"≥ {highlight_threshold}"
+            color="red", alpha=0.7, label=f"≥ {highlight_threshold}"
+        )
+
+    # --- 欠損を×マークで表示 ---
+    if mark_missing:
+        plt.scatter(
+            pivot_df.loc[missing_mask, "ref"],
+            pivot_df.loc[missing_mask, "alt"],
+            marker="x", color="black", s=30, label="missing"
         )
 
     if show_labels:
@@ -68,13 +86,13 @@ def plot_fimo_scatter(
     plt.ylabel("-log10(p-value) 変異型")
 
     max_val = max(pivot_df["ref"].max(), pivot_df["alt"].max())
-    plt.plot([0, max_val+1], [0, max_val+1], color="black", linestyle="--", alpha=0.6)
+    plt.plot([0, max_val+1.0], [0, max_val+1.0], color="black", linestyle="--", alpha=0.6)
 
     plt.axvline(x=4, color="gray", linestyle=":", linewidth=1, alpha=0.8)
-    plt.axhline(y=4, color="gray", linestyle=":", linewidth=1, alpha=0.8)
+    #plt.axhline(y=4, color="gray", linestyle=":", linewidth=1, alpha=0.8)
 
-    plt.xlim(2, max_val + 0.5)
-    plt.ylim(2, max_val + 0.5)
+    plt.xlim(min_logp, max_val + 1.0)
+    plt.ylim(min_logp, max_val + 1.0)
 
     # 軸目盛を整数に限定
     ax = plt.gca()
@@ -118,9 +136,18 @@ def main():
         values="log10_p"
     ).reset_index()
 
-    # 欠損を 0 補完
-    pivot_df = pivot_df.fillna(0)
-    pivot_df.columns.name = None  # カラム名の階層をフラットに
+    # 欠損または min_logp 以下のセルを検出
+    # 欠損マスク作成（後で×を描く用）
+    pivot_df["ref_missing"] = pivot_df["ref"].isna() | (pivot_df["ref"] <= args.min_logp)
+    pivot_df["alt_missing"] = pivot_df["alt"].isna() | (pivot_df["alt"] <= args.min_logp)
+
+    # 欠損・min_logp以下の値を min_logp で補完
+    # min_logp以下を明示的に置換（fillnaでは足りないため）
+    pivot_df["ref"] = pivot_df["ref"].fillna(args.min_logp)
+    pivot_df["alt"] = pivot_df["alt"].fillna(args.min_logp)
+    pivot_df.loc[pivot_df["ref"] <= args.min_logp, "ref"] = args.min_logp
+    pivot_df.loc[pivot_df["alt"] <= args.min_logp, "alt"] = args.min_logp
+    pivot_df.columns.name = None # カラム名の階層をフラットに
 
     # オーバーラップするモチーフに限るかどうか
     pivot_df["overlap"] = pivot_df.apply(
@@ -136,10 +163,11 @@ def main():
         out_file,
         show_labels=not args.no_label,
         figsize=tuple(args.figsize),
-        highlight_threshold=args.highlight_threshold
+        highlight_threshold=args.highlight_threshold,
+        min_logp=args.min_logp,
+        mark_missing=args.mark_missing
     )
 
 
 if __name__ == "__main__":
     main()
-~
