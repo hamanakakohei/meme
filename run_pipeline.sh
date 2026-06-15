@@ -58,9 +58,27 @@ done
 find results/02/ -name "fimo_scatter.png" > results/02/images.txt
 
 
+# 2-3. 各motif IDについてrefとmutをよこに並べたような表にする
+scripts/02-3.py \
+  -i results/02/fimo_JASPAR2024_CORE_vertebrates_non-redundant_pfms_meme_--nrdb--/fimo.tsv \
+  -o results/02/fimo_JASPAR2024_CORE_vertebrates_non-redundant_pfms_meme_--nrdb--/fimo.formatted.tsv
+
+
 # 3. 散布図を結合して1つの図にする
 mkdir -p results/03
 
 scripts/03.py \
   --images results/02/images.txt \
   --out results/03/merged.png
+
+
+# 4. 予測モチーフ領域を長方形の積み上げ図で示す
+scripts/04.R \
+  -i results/02/fimo_JASPAR2024_CORE_vertebrates_non-redundant_pfms_meme_--nrdb--/fimo.tsv \
+  -o results/04/out.550to800.$W.$H.png \
+  -t 0.0001 \
+  --seq_name chr18:63774360-63774960_63774660ref \
+  --xlim "550,800" \
+  --base_pos 359 \
+  --width $W \
+  --height $H
